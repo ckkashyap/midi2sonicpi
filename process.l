@@ -38,6 +38,19 @@
     (let L (rd-varlen)
          (RD L)))
 
+(de bits->event-type (Bts)
+  (cond
+    ((= Bts (hex "8")) 'note-off)
+    ((= Bts (hex "9")) 'note-on)
+    ((= Bts (hex "a")) 'aftertouch)
+    ((= Bts (hex "b")) 'control-change)
+    ((= Bts (hex "c")) 'program-change)
+    ((= Bts (hex "d")) 'channel-aftertouch)
+    ((= Bts (hex "e")) 'pitch-bend)
+    (T (pack "Uknown message" Bts))
+  )
+)
+
 (de rd-evt ()
   (let B1 (RD 1)
 
@@ -60,6 +73,19 @@
           ))
         )
         ((= B1 (hex "f0")) (link (list 'sysex (rd-vstr))))
+        (T 
+        (cond
+           ((not (= 0 (and (hex "80") B1)))
+                 (let (
+                        Chn (& 7 B1)
+                        Msg (bits->event-type (>> 4 B1))
+                      )
+                      (link (list 'AAAA Chn Msg))
+                      (setq *OFST 10000000)
+                 )
+           )
+        )
+        )
         (T (setq *OFST 10000000))
 
     )
