@@ -51,9 +51,14 @@
   )
 )
 
+(de two-byte-event? (Bits)
+  (not (or (= Bits (hex "c")) (= Bits (hex "d")))))
+
+
+(setq *CTR 0)
+
 (de rd-evt ()
   (let B1 (RD 1)
-
     (cond
         ((= B1 (hex "ff")) #meta
           (link (list 'meta
@@ -74,20 +79,25 @@
         )
         ((= B1 (hex "f0")) (link (list 'sysex (rd-vstr))))
         (T 
-        (cond
-           ((not (= 0 (and (hex "80") B1)))
-                 (let (
-                        Chn (& 7 B1)
-                        Msg (bits->event-type (>> 4 B1))
-                      )
-                      (link (list 'AAAA Chn Msg))
-                      (setq *OFST 10000000)
-                 )
-           )
-        )
+            (cond
+               ((not (= 0 (and (hex "80") B1)))
+                     (let (
+                            Chn (& 7 B1)
+                            MN  (>> 4 B1)
+                            Msg (bits->event-type MN)
+                            P1 (RD 1)
+                            P2 (if (two-byte-event? MN) (RD 1) NIL)
+
+                          )
+                          (setq *CTR (inc *CTR))
+                          (when (= *CTR 40) (setq *OFST 10000000))
+                          (link (list Chn Msg P1 P2))
+                     )
+               )
+               (T (prinl "DONE") (bye))
+            )
         )
         (T (setq *OFST 10000000))
-
     )
   )
 )
@@ -101,6 +111,7 @@
                      (let (DT (rd-varlen)
                            E (rd-evt))
                       )
+                     #(link E)
                 )
               )
     )
@@ -121,10 +132,11 @@
          
 
 
+(setq *FN "beatit.mid")
           
 (when *FN
     (in *FN
        (while (rd-chunk) (prinl (pretty @)))))
 
 
-
+(bye)
