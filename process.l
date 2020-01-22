@@ -61,7 +61,7 @@
   (let B1 (RD 1)
     (cond
         ((= B1 (hex "ff")) #meta
-          (link (list 'meta
+          (list 'meta
             (let B2 (RD 1)
                  (cond
                        ((= B2 1) (list 'text (rd-vstr)))
@@ -75,9 +75,9 @@
 
                  )
             )
-          ))
+          )
         )
-        ((= B1 (hex "f0")) (link (list 'sysex (rd-vstr))))
+        ((= B1 (hex "f0")) (list 'sysex (rd-vstr)))
         (T 
             (cond
                ((not (= 0 (and (hex "80") B1)))
@@ -90,8 +90,7 @@
 
                           )
                           (setq *CTR (inc *CTR))
-                          (when (= *CTR 40) (setq *OFST 10000000))
-                          (link (list Chn Msg P1 P2))
+                          (list Msg Chn P1 P2)
                      )
                )
                (T (prinl "DONE") (bye))
@@ -105,13 +104,15 @@
 (de rd-trk ()
     (let (L (RD 4)
           E (+ *OFST L))
-
               (make
-                (while (< *OFST E)
-                     (let (DT (rd-varlen)
-                           E (rd-evt))
-                      )
-                     #(link E)
+                (let TIME 0
+                    (while (< *OFST E)
+                         (let (DT (rd-varlen)
+                               E (rd-evt))
+                               (setq TIME (+ TIME DT))
+                               (link (cons TIME E))
+                          )
+                    )
                 )
               )
     )
